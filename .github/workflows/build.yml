@@ -18,14 +18,35 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+    - name: Install Android SDK & Build Tools
+      run: |
+        # Download command line tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q commandlinetools-linux-11076708_latest.zip
+        mkdir -p android-sdk/cmdline-tools
+        mv cmdline-tools android-sdk/cmdline-tools/latest
+        export ANDROID_SDK_ROOT=$PWD/android-sdk
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        
+        # Accept licenses
+        yes | sdkmanager --licenses > /dev/null 2>&1
+        
+        # Install SDK 33 and build tools
+        sdkmanager "platforms;android-33" "build-tools;33.0.2"
+        
+        # Create local.properties
+        echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+    - name: Install Gradle
+      run: |
+        sudo apt-get update
+        sudo apt-get install gradle -y
 
     - name: Build APK
-      run: gradle assembleDebug
+      run: |
+        export ANDROID_SDK_ROOT=$PWD/android-sdk
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        gradle assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
